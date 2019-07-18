@@ -10,13 +10,14 @@ from actor import ActorNetwork
 from critic import CriticNetwork
 import matplotlib.pyplot as plt
 import time
+import sys
 
 
 # ==========================
 #   Training Parameters
 # ==========================
 # Maximum episodes run
-MAX_EPISODES = 60000  # 5000
+MAX_EPISODES = 1000  # 5000
 # Max episode length
 MAX_EP_STEPS = 20  # 20
 # Episodes with noise
@@ -41,6 +42,8 @@ BUFFER_SIZE = 20480
 MINIBATCH_SIZE = 64
 # Random seed
 RANDOM_SEED = 23
+# path for saving the model
+model_path = sys.path[0] + '/model.ckpt'
 
 # ===========================
 #   Agent Training
@@ -198,8 +201,14 @@ def train(sess, env, actor, critic, noise, action_bound):
     plt.show()
 
 
+# def test()
+
+
 def main(_):
+    saver = tf.train.Saver()
+
     with tf.Session() as sess:
+
         env = PowerSystem()
 
         # System Info
@@ -216,6 +225,10 @@ def main(_):
 
         # Training the model
         train(sess, env, actor, critic, noise, action_bound)
+
+        # # save the variables
+        save_path = saver.save(sess, model_path)
+        print("[+] Model saved in file: %s" % save_path)
 
 
 if __name__ == '__main__':
