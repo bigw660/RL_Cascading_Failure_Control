@@ -122,6 +122,42 @@ class PowerSystem:
         print(len(self.unsafe_init), '\n')
         return self.i_cs
 
+    def reset_offline_test(self, episode):
+        output = eng.ps_reset_offline_test(episode, nargout=6)
+        self.p_gen = mlarray_to_pylist(output[0])
+        self.p_dem = mlarray_to_pylist(output[1])
+        self.q_dem = mlarray_to_pylist(output[2])
+        self.lineout = mlarray_to_pylist(output[3])
+        v_cs = mlarray_to_pylist(output[4])
+        self.i_cs = np.array(mlarray_to_pylist(output[5]))
+        # print(self.i_cs.shape)
+        self.p_dem = matlab.double(self.p_dem)
+        self.q_dem = matlab.double(self.q_dem)
+        self.lineout = matlab.double(self.lineout)
+        self.safe_init = []
+        self.unsafe_init = []
+        for i in range(0, self.n_lines):
+            if self.i_cs[i] < self.i_max[i]:
+                self.safe_init.append(i)
+            else:
+                self.unsafe_init.append(i)
+
+        # return v_cs, i_cs (for future)
+        print('########################################')
+        print('Environment Reset !!!')
+        print('########################################\n')
+        print("******** The Initial Threshold ********")
+        print(self.i_max, '\n')
+        print("******** The Initial State ********")
+        print(self.i_cs, '\n')
+        print("******** The Initial Generator Output ********")
+        print(self.p_gen, '\n')
+        # print("******** The Indexes of Initial Unsafe Lines ********")
+        # print(self.unsafe_init, '\n')
+        print("******** The Number of Initial Unsafe Lines ********")
+        print(len(self.unsafe_init), '\n')
+        return self.i_cs
+
     # env.step() --> step the environment by one time-step. Returns
     # observation: Observations of the environment
     # reward: If your action was beneficial or not

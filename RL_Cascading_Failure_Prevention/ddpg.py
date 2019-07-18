@@ -10,14 +10,13 @@ from actor import ActorNetwork
 from critic import CriticNetwork
 import matplotlib.pyplot as plt
 import time
-import sys
 
 
 # ==========================
 #   Training Parameters
 # ==========================
 # Maximum episodes run
-MAX_EPISODES = 1000  # 5000
+MAX_EPISODES = 100000  # 5000
 # Max episode length
 MAX_EP_STEPS = 20  # 20
 # Episodes with noise
@@ -43,7 +42,7 @@ MINIBATCH_SIZE = 64
 # Random seed
 RANDOM_SEED = 23
 # path for saving the model
-model_path = sys.path[0] + '/model.ckpt'
+model_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_Cascading_Failure_Prevention\saved_models\model.ckpt"
 
 # ===========================
 #   Agent Training
@@ -76,9 +75,6 @@ def train(sess, env, actor, critic, noise, action_bound):
     # Initialize replay memory
     replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
 
-    # Initialize noise
-    ou_level = 0.
-
     # Record total steps
     total_step = 0
 
@@ -107,14 +103,9 @@ def train(sess, env, actor, critic, noise, action_bound):
             a = actor.predict(np.reshape(s, (1, actor.s_dim)))
 
             # Add exploration noise
-            # BUYIYANG
             if i < NOISE_MAX_EP:
                 noise = 0.9995 * np.random.normal(0, 0.1)
                 a = a + noise
-                # ou_level = noise.ornstein_uhlenbeck_level(ou_level)
-                # a = a + ou_level
-            #     a[0][0] = np.clip(a[0][0], 0.375, 1.5)
-            #     a[0][1] = np.clip(a[0][1], 0.45, 1.8)
 
             # Set action for continuous action spaces
             action = a[0]
@@ -128,15 +119,6 @@ def train(sess, env, actor, critic, noise, action_bound):
                               np.reshape(s2, (actor.s_dim,)))
 
             # Keep adding experience to the memory until there are at least minibatch size samples
-            # if total_step == BUFFER_SIZE+1:
-            #     print("#########################################################")
-            #     print("#########################################################")
-            #     print("#########################################################")
-            #     print("################ AGENT STARTS LEARNING ##################")
-            #     print("#########################################################")
-            #     print("#########################################################")
-            #     print("#########################################################")
-
             if total_step > BUFFER_SIZE+1:
                 s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(MINIBATCH_SIZE)
 
@@ -201,16 +183,82 @@ def train(sess, env, actor, critic, noise, action_bound):
     plt.show()
 
 
-# def test()
+def test(env, actor):
+    testing_size = 5000
+    # plotting
+    plot_step = []
+    plot_ep_reward = []
+
+    # Record total steps
+    total_step = 0
+
+    for i in range(testing_size):
+        print('########################################')
+        print('########################################')
+        print('########################################')
+        print('Testing Case: ', i+1)
+        s = env.reset_offline_test(i+1)
+
+        # Initialize episode reward
+        ep_reward = 0
+
+        # Initialize step counter
+        step_counter = 0
+
+        for j in range(MAX_EP_STEPS):
+            total_step += 1
+            # Obtain the action from actor network
+            # a_without_scale = actor.predict(np.reshape(s, (1, actor.s_dim)))
+            # a = action_scale_out(action_bound, a_without_scale)
+            a = actor.predict(np.reshape(s, (1, actor.s_dim)))
+
+            # Set action for continuous action spaces
+            action = a[0]
+            # print("The actions is: ", action)
+
+            # Obtain next state, reward, and terminal from the environment
+            s2, r, terminal, early_stop = env.step(action)
+
+            # Update state, step counter, critic loss, episode reward
+            step_r_penalty = 0.3 * (j+1)
+            r = r - step_r_penalty  # set penalty for each step (try to use less steps)
+            s = s2
+            step_counter += 1
+            ep_reward += r
+
+            print("******************************* Step Reward *******************************")
+            print('Step Reward:', r,  '\n')
+
+            if early_stop:
+                print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Failed ! Generator exploded! @@@@@@@@@@@@@@@'
+                      '@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+                break
+
+            if j == MAX_EP_STEPS-1 and not terminal:
+                print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Failed! Run out ot Steps! @@@@@@@@@@@@@@@@@@@@'
+                      '@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+                break
+
+            if terminal:
+                print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@;@@@@@@@@@@@@@ Succeeded! Used ', j+1,
+                      " steps to make all lines safe@@@@@@@@@@@@!")
+                break
+        plot_step.append(step_counter)
+        plot_ep_reward.append(ep_reward)
+
+    # plotting the graphs
+    plt.figure('Episode Step')
+    plt.plot(range(1, MAX_EPISODES + 1), plot_step, 'b-')
+    plt.figure('Episode Reward')
+    plt.plot(range(1, MAX_EPISODES + 1), plot_ep_reward, 'b-')
+    plt.show()
 
 
 def main(_):
-    saver = tf.train.Saver()
-
+    # Training the model
     with tf.Session() as sess:
 
         env = PowerSystem()
-
         # System Info
         state_dim = 11  # We only consider the Current of all line as state at this moment
         action_dim = 2  # The number of generators
@@ -221,6 +269,8 @@ def main(_):
         critic = CriticNetwork(sess, state_dim, action_dim, CRITIC_LEARNING_RATE, TAU,
                                actor.get_num_trainable_vars())
 
+        saver = tf.train.Saver()
+
         noise = Noise(DELTA, SIGMA, OU_A, OU_MU)
 
         # Training the model
@@ -228,7 +278,21 @@ def main(_):
 
         # # save the variables
         save_path = saver.save(sess, model_path)
-        print("[+] Model saved in file: %s" % save_path)
+        # print("[+] Model saved in file: %s" % save_path)
+
+    # Testing the model
+    with tf.Session() as sess:
+
+        env = PowerSystem()
+        # System Info
+        state_dim = 11  # We only consider the Current of all line as state at this moment
+        action_dim = 2  # The number of generators
+        action_bound = np.array([[-1, 1], [-0.675, 0.675]])
+
+        actor = ActorNetwork(sess, state_dim, action_dim, action_bound, ACTOR_LEARNING_RATE, TAU)
+        saver = tf.train.Saver()
+        load_path = saver.restore(sess, model_path)
+        test(env, actor)
 
 
 if __name__ == '__main__':
