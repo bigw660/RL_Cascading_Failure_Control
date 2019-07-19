@@ -248,10 +248,16 @@ def test(env, actor):
         plot_ep_reward.append(ep_reward)
 
     # plotting the graphs
+
     plt.figure('Episode Step')
+    plt.xlim((1, testing_size + 1))
+    plt.ylim((1, 11))
     plt.plot(range(1, testing_size + 1), plot_step, 'b-')
+
     plt.figure('Episode Reward')
-    plt.plot(range(1, testing_size + 1), plot_ep_reward, 'b-')
+    plt.xlim((1, testing_size + 1))
+    plt.ylim((-11, 11))
+    plt.plot(range(1, testing_size + 1), plot_ep_reward, 'r-')
     plt.show()
 
 
