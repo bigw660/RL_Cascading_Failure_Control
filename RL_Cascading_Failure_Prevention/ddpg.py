@@ -263,31 +263,6 @@ def test(env, actor):
 
 def main(_):
     # Training the model
-    # with tf.Session() as sess:
-    #
-    #     env = PowerSystem()
-    #     # System Info
-    #     state_dim = 11  # We only consider the Current of all line as state at this moment
-    #     action_dim = 2  # The number of generators
-    #     action_bound = np.array([[-1, 1], [-0.675, 0.675]])
-    #
-    #     actor = ActorNetwork(sess, state_dim, action_dim, action_bound, ACTOR_LEARNING_RATE, TAU)
-    #
-    #     critic = CriticNetwork(sess, state_dim, action_dim, CRITIC_LEARNING_RATE, TAU,
-    #                            actor.get_num_trainable_vars())
-    #
-    #     saver = tf.train.Saver()
-    #
-    #     noise = Noise(DELTA, SIGMA, OU_A, OU_MU)
-    #
-    #     # Training the model
-    #     train(sess, env, actor, critic, noise, action_bound)
-    #
-    #     # # save the variables
-    #     save_path = saver.save(sess, model_path)
-    #     # print("[+] Model saved in file: %s" % save_path)
-
-    # # Testing the model
     with tf.Session() as sess:
 
         env = PowerSystem()
@@ -297,9 +272,34 @@ def main(_):
         action_bound = np.array([[-1, 1], [-0.675, 0.675]])
 
         actor = ActorNetwork(sess, state_dim, action_dim, action_bound, ACTOR_LEARNING_RATE, TAU)
+
+        critic = CriticNetwork(sess, state_dim, action_dim, CRITIC_LEARNING_RATE, TAU,
+                               actor.get_num_trainable_vars())
+
         saver = tf.train.Saver()
-        load_path = saver.restore(sess, model_path)
-        test(env, actor)
+
+        noise = Noise(DELTA, SIGMA, OU_A, OU_MU)
+
+        # Training the model
+        train(sess, env, actor, critic, noise, action_bound)
+
+        # # save the variables
+        save_path = saver.save(sess, model_path)
+        # print("[+] Model saved in file: %s" % save_path)
+
+    # # Testing the model
+    # with tf.Session() as sess:
+    #
+    #     env = PowerSystem()
+    #     # System Info
+    #     state_dim = 11  # We only consider the Current of all line as state at this moment
+    #     action_dim = 2  # The number of generators
+    #     action_bound = np.array([[-1, 1], [-0.675, 0.675]])
+    #
+    #     actor = ActorNetwork(sess, state_dim, action_dim, action_bound, ACTOR_LEARNING_RATE, TAU)
+    #     saver = tf.train.Saver()
+    #     load_path = saver.restore(sess, model_path)
+    #     test(env, actor)
 
 
 if __name__ == '__main__':
