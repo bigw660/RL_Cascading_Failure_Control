@@ -1,0 +1,2 @@
+model_checkpoint_path: "C:\\Users\\Mariana Kamel\\Documents\\PyCharm\\mariana\\RL_Cascading_Failure_Prevention\\saved_models\\model_1.ckpt"
+all_model_checkpoint_paths: "C:\\Users\\Mariana Kamel\\Documents\\PyCharm\\mariana\\RL_Cascading_Failure_Prevention\\saved_models\\model_1.ckpt"
