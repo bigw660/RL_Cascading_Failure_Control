@@ -20,7 +20,7 @@ MAX_EPISODES = 100000  # 5000
 # Max episode length
 MAX_EP_STEPS = 20  # 20
 # Episodes with noise
-NOISE_MAX_EP = 2500
+NOISE_MAX_EP = 5000
 # Noise parameters - Ornstein Uhlenbeck
 DELTA = 0.5  # The rate of change (time)
 SIGMA = 0.5  # Volatility of the stochastic processes
@@ -37,26 +37,26 @@ GAMMA = 0.99
 # Soft target update param
 TAU = 0.001
 # Size of replay buffer
-BUFFER_SIZE = 20480
+BUFFER_SIZE = 80000
 MINIBATCH_SIZE = 64
 # Random seed
 RANDOM_SEED = 23
 # path for saving the model
 model_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_" \
-             r"Cascading_Failure_Prevention\saved_models\model_1.ckpt"
+             r"Cascading_Failure_Prevention\saved_models\model_14_bus_1.ckpt"
 
 # ===========================
 #   Agent Training
 # ===========================
 
 
-def action_scale_out(action_bound, out):
-    # Creating a mapping from [a, b] to [c, d]
-    # y = (x-a) * (d-c) / (b-a) + c
-    # The action will be the output for each generator
-    for i in range(len(out[0])):
-        out[:, i] = (out[:, i] - (-1)) * (action_bound[i][1] - action_bound[i][0]) / (1 - (-1)) + action_bound[i][0]
-    return out
+# def action_scale_out(action_bound, out):
+#     # Creating a mapping from [a, b] to [c, d]
+#     # y = (x-a) * (d-c) / (b-a) + c
+#     # The action will be the output for each generator
+#     for i in range(len(out[0])):
+#         out[:, i] = (out[:, i] - (-1)) * (action_bound[i][1] - action_bound[i][0]) / (1 - (-1)) + action_bound[i][0]
+#     return out
 
 
 def train(sess, env, actor, critic, noise, action_bound):
@@ -105,7 +105,7 @@ def train(sess, env, actor, critic, noise, action_bound):
 
             # Add exploration noise
             if i < NOISE_MAX_EP:
-                noise = 0.9995 * np.random.normal(0, 0.1)
+                noise = 0.99995 * np.random.normal(0, 0.1)
                 a = a + noise
 
             # Set action for continuous action spaces
@@ -177,8 +177,10 @@ def train(sess, env, actor, critic, noise, action_bound):
     # plotting the graphs
     plt.figure('Episode Step')
     plt.plot(range(1, MAX_EPISODES + 1), plot_step, 'b-')
+
     plt.figure('Episode Reward')
     plt.plot(range(1, MAX_EPISODES + 1), plot_ep_reward, 'b-')
+
     plt.figure('Episode Critic Loss')
     plt.plot(range(1, MAX_EPISODES + 1), plot_loss, 'b-')
     plt.show()
@@ -262,13 +264,14 @@ def test(env, actor):
 
 
 def main(_):
+    t1 = time.time()
     # Training the model
     with tf.Session() as sess:
 
         env = PowerSystem()
         # System Info
-        state_dim = 11  # We only consider the Current of all line as state at this moment
-        action_dim = 2  # The number of generators
+        state_dim = 20  # We only consider the Current of all line as state at this moment
+        action_dim = 4  # The number of generators
         action_bound = np.array([[-1, 1], [-0.675, 0.675]])
 
         actor = ActorNetwork(sess, state_dim, action_dim, action_bound, ACTOR_LEARNING_RATE, TAU)
@@ -300,9 +303,8 @@ def main(_):
     #     saver = tf.train.Saver()
     #     load_path = saver.restore(sess, model_path)
     #     test(env, actor)
+    print('Running time: ', time.time() - t1)
 
 
 if __name__ == '__main__':
-    t1 = time.time()
     tf.app.run()
-    print('Running time: ', time.time() - t1)

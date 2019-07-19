@@ -87,6 +87,7 @@ class PowerSystem:
     #     return self.i_cs
 
     def reset_offline(self, episode):
+        # use ps_reset matlab file
         output = eng.ps_reset_offline(episode, nargout=6)
         self.p_gen = mlarray_to_pylist(output[0])
         self.p_dem = mlarray_to_pylist(output[1])
@@ -168,7 +169,11 @@ class PowerSystem:
         self.unsafe_before = []
         self.safe_after = []
         self.unsafe_after = []
+
+        # Bound for the 6 bus system
         p_gen_range = [[0.375, 1.5], [0.45, 1.8]]
+
+
         reward = 0
         terminal = True
         early_stop = False
@@ -218,6 +223,7 @@ class PowerSystem:
                 if self.i_cs[i] > self.i_max[i]:
                     reward = reward + (self.i_max[i] - i_ns[i]) / self.i_max[i]
         if terminal:
+            # reward for 6 bus system
             reward = reward + 10
 
         print("******** State Before Action ********")
