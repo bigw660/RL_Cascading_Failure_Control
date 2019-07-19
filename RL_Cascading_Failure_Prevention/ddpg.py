@@ -18,7 +18,7 @@ import time
 # Maximum episodes run
 MAX_EPISODES = 100000  # 5000
 # Max episode length
-MAX_EP_STEPS = 20  # 20
+MAX_EP_STEPS = 10  # 20
 # Episodes with noise
 NOISE_MAX_EP = 2500
 # Noise parameters - Ornstein Uhlenbeck
@@ -42,7 +42,8 @@ MINIBATCH_SIZE = 64
 # Random seed
 RANDOM_SEED = 23
 # path for saving the model
-model_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_Cascading_Failure_Prevention\saved_models\model.ckpt"
+model_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_" \
+             r"Cascading_Failure_Prevention\saved_models\model_1.ckpt"
 
 # ===========================
 #   Agent Training
@@ -248,9 +249,9 @@ def test(env, actor):
 
     # plotting the graphs
     plt.figure('Episode Step')
-    plt.plot(range(1, MAX_EPISODES + 1), plot_step, 'b-')
+    plt.plot(range(1, testing_size + 1), plot_step, 'b-')
     plt.figure('Episode Reward')
-    plt.plot(range(1, MAX_EPISODES + 1), plot_ep_reward, 'b-')
+    plt.plot(range(1, testing_size + 1), plot_ep_reward, 'b-')
     plt.show()
 
 
@@ -280,19 +281,19 @@ def main(_):
         save_path = saver.save(sess, model_path)
         # print("[+] Model saved in file: %s" % save_path)
 
-    # Testing the model
-    with tf.Session() as sess:
-
-        env = PowerSystem()
-        # System Info
-        state_dim = 11  # We only consider the Current of all line as state at this moment
-        action_dim = 2  # The number of generators
-        action_bound = np.array([[-1, 1], [-0.675, 0.675]])
-
-        actor = ActorNetwork(sess, state_dim, action_dim, action_bound, ACTOR_LEARNING_RATE, TAU)
-        saver = tf.train.Saver()
-        load_path = saver.restore(sess, model_path)
-        test(env, actor)
+    # # Testing the model
+    # with tf.Session() as sess:
+    #
+    #     env = PowerSystem()
+    #     # System Info
+    #     state_dim = 11  # We only consider the Current of all line as state at this moment
+    #     action_dim = 2  # The number of generators
+    #     action_bound = np.array([[-1, 1], [-0.675, 0.675]])
+    #
+    #     actor = ActorNetwork(sess, state_dim, action_dim, action_bound, ACTOR_LEARNING_RATE, TAU)
+    #     saver = tf.train.Saver()
+    #     load_path = saver.restore(sess, model_path)
+    #     test(env, actor)
 
 
 if __name__ == '__main__':
