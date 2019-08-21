@@ -20,7 +20,7 @@ import sys
 # Maximum episodes run
 MAX_EPISODES = 50000  # 5000
 # Max episode length
-MAX_EP_STEPS = 10  # 20
+MAX_EP_STEPS = 50  # 20
 # Episodes with noise
 NOISE_MAX_EP = 10000
 # Noise parameters - Ornstein Uhlenbeck
@@ -45,10 +45,10 @@ MINIBATCH_SIZE = 128
 RANDOM_SEED = 23
 # path for saving the model
 model_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_" \
-             r"Cascading_Failure_Prevention\saved_models\14bus_model_1_all.ckpt"
+             r"Cascading_Failure_Prevention\saved_models\118bus_model_1_10lines.ckpt"
 # random-1 is the prefect model
 to_matlab_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_" \
-             r"Cascading_Failure_Prevention\plotting_data_14bus_1_all.mat"
+             r"Cascading_Failure_Prevention\plotting_data_118bus_1_10lines.mat"
 
 # ===========================
 #   Agent Training
@@ -89,7 +89,7 @@ def train(sess, env, actor, critic, noise, action_bound):
         print('########################################')
         print('########################################')
         print('Episode: ', i+1)
-        random = np.random.randint(1, 5001)
+        random = np.random.randint(1, 2001)
         s = env.reset_offline(random)
 
         # Initialize episode reward
@@ -110,7 +110,10 @@ def train(sess, env, actor, critic, noise, action_bound):
 
             # Add exploration noise
             if i < NOISE_MAX_EP:
-                noise = 0.9996 * np.random.normal(0, 0.1)
+                noise = np.zeros((1, 53))
+                for x in range(53):
+                    noise[0: x] = np.random.normal(0, 0.1)
+                noise = 0.9996 * noise
                 a = a + noise
 
             # a = action_scale_out(action_bound, a)
@@ -121,7 +124,7 @@ def train(sess, env, actor, critic, noise, action_bound):
             # Obtain next state, reward, and terminal from the environment
             s2, r, terminal, early_stop = env.step(action)
 
-            step_r_penalty = 1
+            step_r_penalty = 0.1
             r = r - step_r_penalty
 
             # Adding s, a, r, terminal, s2 into buffer
@@ -130,7 +133,7 @@ def train(sess, env, actor, critic, noise, action_bound):
 
             # Keep adding experience to the memory until there are at least minibatch size samples
             # if total_step > BUFFER_SIZE+1:
-            if replay_buffer.size() > MINIBATCH_SIZE:
+            if replay_buffer.size() > MINIBATCH_SIZE*10:
                 s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(MINIBATCH_SIZE)
 
                 # Calculate targets
@@ -231,8 +234,11 @@ def test(env, actor):
             # Obtain the action from actor network
             # a_without_scale = actor.predict(np.reshape(s, (1, actor.s_dim)))
             # a = action_scale_out(action_bound, a_without_scale)
-            a = actor.predict(np.reshape(s, (1, actor.s_dim)))
 
+            a = actor.predict(np.reshape(s, (1, actor.s_dim)))
+            if i < NOISE_MAX_EP:
+                noise = 0.9996 * np.random.normal(0, 0.05)
+                a = a + noise
             # Set action for continuous action spaces
             action = a[0]
             # print("The actions is: ", action)
@@ -241,7 +247,7 @@ def test(env, actor):
             s2, r, terminal, early_stop = env.step(action)
 
             # Update state, step counter, critic loss, episode reward
-            step_r_penalty = 0.3
+            step_r_penalty = 1
             r = r - step_r_penalty  # set penalty for each step (try to use less steps)
             s = s2
             step_counter += 1
@@ -288,8 +294,8 @@ def main(_):
 
         env = PowerSystem()
         # System Info
-        state_dim = 24  # We only consider the Current of all line as state at this moment
-        action_dim = 4  # The number of generators
+        state_dim = 186 + 53  # We only consider the Current of all line as state at this moment
+        action_dim = 53  # The number of generators
         action_bound = np.array([[-1, 1], [-0.675, 0.675]])
 
         actor = ActorNetwork(sess, state_dim, action_dim, action_bound, ACTOR_LEARNING_RATE, TAU)
@@ -327,7 +333,7 @@ def main(_):
 if __name__ == '__main__':
     # # make a copy of original stdout route
     # stdout_backup = sys.stdout
-    # log_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_Cascading_Failure_Prevention\logs_14bus.log"
+    # log_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_Cascading_Failure_Prevention\logs_118bus.log"
     # # define the log file that receives your log info
     # log_file = open(log_path, "w")
     # # redirect print output to log file

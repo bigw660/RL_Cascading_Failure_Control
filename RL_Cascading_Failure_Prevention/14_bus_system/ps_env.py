@@ -6,7 +6,7 @@ import matlab.engine
 eng = matlab.engine.start_matlab()
 
 # get power system data
-case_file = 'case14_RL'
+case_file = 'case_14'
 
 
 def mlarray_to_pylist(x):
@@ -50,6 +50,7 @@ class PowerSystem:
         self.n_lines = len(self.i_max)
         # current state
         self.i_cs = None
+        self.p_gen_cs = None
         # create two variable to store the indexes of safe and unsafe lines
 
     # def reset(self):
@@ -87,7 +88,8 @@ class PowerSystem:
     #     return self.i_cs
 
     def reset_offline(self, episode):
-        output = eng.ps_reset_offline(episode, nargout=6)
+        # use ps_reset matlab file
+        output = eng.ps_reset_offline_14(episode, nargout=6)
         self.p_gen = mlarray_to_pylist(output[0])
         self.p_dem = mlarray_to_pylist(output[1])
         self.q_dem = mlarray_to_pylist(output[2])
@@ -115,12 +117,15 @@ class PowerSystem:
         print("******** The Initial State ********")
         print(self.i_cs, '\n')
         print("******** The Initial Generator Output ********")
-        print(self.p_gen, '\n')
+        print(self.p_gen[1:5], '\n')
         # print("******** The Indexes of Initial Unsafe Lines ********")
         # print(self.unsafe_init, '\n')
         print("******** The Number of Initial Unsafe Lines ********")
         print(len(self.unsafe_init), '\n')
-        return self.i_cs
+        self.p_gen_cs = [self.p_gen[index] for index in self.ctrl_gens_idx]
+        self.p_gen_cs = np.array(self.p_gen_cs)
+        aaa = np.concatenate([self.i_cs, self.p_gen_cs])
+        return aaa
 
     def reset_offline_test(self, episode):
         output = eng.ps_reset_offline_test(episode, nargout=6)
@@ -151,7 +156,7 @@ class PowerSystem:
         print("******** The Initial State ********")
         print(self.i_cs, '\n')
         print("******** The Initial Generator Output ********")
-        print(self.p_gen, '\n')
+        print(self.p_gen[1:5], '\n')
         # print("******** The Indexes of Initial Unsafe Lines ********")
         # print(self.unsafe_init, '\n')
         print("******** The Number of Initial Unsafe Lines ********")
@@ -170,10 +175,8 @@ class PowerSystem:
         self.unsafe_after = []
 
         # Bound for the 6 bus system
-        # p_gen_range = [[0.375, 1.5], [0.45, 1.8]]
-
-        # Bound for the 14 bus system
-        p_gen_range = [[0, 1.4], [0, 1], [0, 1], [0, 1]]
+        p_gen_range = [[0, 1.4], [0, 1.0], [0, 1.5], [0, 1.0]]
+        # action_bound = [[-0.1, 0.1], [-0.1, 0.1]]
 
         reward = 0
         terminal = True
@@ -186,13 +189,28 @@ class PowerSystem:
             else:
                 self.unsafe_before.append(i)
 
-        i = 0
+        # for k in self.ctrl_gens_idx:
+        #     self.p_gen[k] = action[k-1] + self.p_gen[k]
+        #     if self.p_gen[k] < p_gen_range[k-1][0] or self.p_gen[k] > p_gen_range[k-1][1]:
+        #         reward = reward - 5
+        #         early_stop = True
+
         for k in self.ctrl_gens_idx:
-            self.p_gen[k] = action[i] + self.p_gen[k]
-            i = i + 1
-            if self.p_gen[k] < p_gen_range[k-1][0] or self.p_gen[k] > p_gen_range[k-1][1]:
-                reward = reward - 2.5
+
+            # scale out
+            #action = self.action_scale_out(action_bound, action)
+            #action = action[0]
+
+            self.p_gen[k] = action[k-1] + self.p_gen[k]
+            if self.p_gen[k] < p_gen_range[k-1][0]:
                 early_stop = True
+                # reward = reward - (p_gen_range[k-1][0] - self.p_gen[k])
+                reward = reward - 2.5
+            if self.p_gen[k] > p_gen_range[k-1][1]:
+                early_stop = True
+                # reward = reward - (self.p_gen[k] - p_gen_range[k-1][1])
+                reward = reward - 2.5
+
         if early_stop:
             print("******** State Before Action ********")
             print(self.i_cs, '\n')
@@ -201,8 +219,11 @@ class PowerSystem:
             print("******** Action Taken ********")
             print(action, '\n')
             print("******** Generator Output ********")
-            print(self.p_gen, '\n')
-            return self.i_cs, reward, terminal, early_stop
+            print(self.p_gen[1:5], '\n')
+            self.p_gen_cs = [self.p_gen[index] for index in self.ctrl_gens_idx]
+            self.p_gen_cs = np.array(self.p_gen_cs)
+            aaa = np.concatenate([self.i_cs, self.p_gen_cs])
+            return aaa, reward, terminal, early_stop
 
         self.p_gen = matlab.double(self.p_gen)
         output = eng.ps_solve(case_file, self.p_gen, self.p_dem, self.q_dem, self.lineout, nargout=3)
@@ -213,20 +234,18 @@ class PowerSystem:
         # reward function
         counter = 0
         for i in range(0, self.n_lines):
-            if i_ns[i] > self.i_max[i]:
+            if i_ns[i] > self.i_max[i] + 0.05:
                 terminal = False
                 counter = counter + 1
                 self.unsafe_after.append(i)
-                if self.i_cs[i] < self.i_max[i]:
-                    reward = reward - (i_ns[i] - self.i_max[i]) / self.i_max[i]
+                # if self.i_cs[i] < self.i_max[i]:
+                #     reward = reward - (i_ns[i] - self.i_max[i]) / self.i_max[i]
             else:
                 self.safe_after.append(i)
-                if self.i_cs[i] > self.i_max[i]:
-                    reward = reward + (self.i_max[i] - i_ns[i]) / self.i_max[i]
+                # if self.i_cs[i] > self.i_max[i]:
+                #     reward = reward + (self.i_max[i] - i_ns[i]) / self.i_max[i]
         if terminal:
             # reward for 6 bus system
-            # reward = reward + 10
-            # reward for 14 bus system
             reward = reward + 10
 
         print("******** State Before Action ********")
@@ -236,11 +255,13 @@ class PowerSystem:
         print("******** Action Taken ********")
         print(action, '\n')
         print("******** Generator Output ********")
-        print(self.p_gen, '\n')
+        print(self.p_gen[1:5], '\n')
         print("******** Unsafe Lines After Action & Teminal ********")
         print(self.unsafe_after, '\t', 'Terminal? ', terminal, '\n')
         print("******** State After Action ********")
         print(i_ns, '\n')
         self.i_cs = i_ns
-        return self.i_cs, reward, terminal, early_stop
-
+        self.p_gen_cs = [self.p_gen[index] for index in self.ctrl_gens_idx]
+        self.p_gen_cs = np.array(self.p_gen_cs)
+        aaa = np.concatenate([self.i_cs, self.p_gen_cs])
+        return aaa, reward, terminal, early_stop

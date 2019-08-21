@@ -2,7 +2,6 @@
 #   DDPG Model
 # ===========================
 import tensorflow as tf
-import scipy.io as io
 import numpy as np
 from ps_env import PowerSystem
 from replay_buffer import ReplayBuffer
@@ -18,11 +17,11 @@ import sys
 #   Training Parameters
 # ==========================
 # Maximum episodes run
-MAX_EPISODES = 50000  # 5000
+MAX_EPISODES = 100000  # 5000
 # Max episode length
-MAX_EP_STEPS = 10  # 20
+MAX_EP_STEPS = 10 # 20
 # Episodes with noise
-NOISE_MAX_EP = 10000
+NOISE_MAX_EP = 20000
 # Noise parameters - Ornstein Uhlenbeck
 DELTA = 0.5  # The rate of change (time)
 SIGMA = 0.5  # Volatility of the stochastic processes
@@ -37,18 +36,15 @@ CRITIC_LEARNING_RATE = 0.0001
 # Discount factor
 GAMMA = 0.99
 # Soft target update param
-TAU = 0.0
+TAU = 0.001
 # Size of replay buffer
-BUFFER_SIZE = 10000
-MINIBATCH_SIZE = 128
+BUFFER_SIZE = 40000
+MINIBATCH_SIZE = 32
 # Random seed
 RANDOM_SEED = 23
 # path for saving the model
 model_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_" \
-             r"Cascading_Failure_Prevention\saved_models\14bus_model_1_all.ckpt"
-# random-1 is the prefect model
-to_matlab_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_" \
-             r"Cascading_Failure_Prevention\plotting_data_14bus_1_all.mat"
+             r"Cascading_Failure_Prevention\saved_models\model_14_bus_fixed_pg_1-10_.ckpt"
 
 # ===========================
 #   Agent Training
@@ -89,7 +85,7 @@ def train(sess, env, actor, critic, noise, action_bound):
         print('########################################')
         print('########################################')
         print('Episode: ', i+1)
-        random = np.random.randint(1, 5001)
+        random = np.random.randint(1, 3001)
         s = env.reset_offline(random)
 
         # Initialize episode reward
@@ -110,10 +106,10 @@ def train(sess, env, actor, critic, noise, action_bound):
 
             # Add exploration noise
             if i < NOISE_MAX_EP:
-                noise = 0.9996 * np.random.normal(0, 0.1)
+                noise = 0.9995 * np.random.normal(0, 0.1)
                 a = a + noise
+               # a = np.clip(a, -1, 1)
 
-            # a = action_scale_out(action_bound, a)
             # Set action for continuous action spaces
             action = a[0]
             # print("The actions is: ", action)
@@ -121,7 +117,7 @@ def train(sess, env, actor, critic, noise, action_bound):
             # Obtain next state, reward, and terminal from the environment
             s2, r, terminal, early_stop = env.step(action)
 
-            step_r_penalty = 1
+            step_r_penalty = 0.3
             r = r - step_r_penalty
 
             # Adding s, a, r, terminal, s2 into buffer
@@ -129,8 +125,7 @@ def train(sess, env, actor, critic, noise, action_bound):
                               np.reshape(s2, (actor.s_dim,)))
 
             # Keep adding experience to the memory until there are at least minibatch size samples
-            # if total_step > BUFFER_SIZE+1:
-            if replay_buffer.size() > MINIBATCH_SIZE:
+            if total_step > BUFFER_SIZE+1:
                 s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(MINIBATCH_SIZE)
 
                 # Calculate targets
@@ -156,7 +151,6 @@ def train(sess, env, actor, critic, noise, action_bound):
                 critic.update_target_network()
 
             # Update state, step counter, critic loss, episode reward
-            # step_r_penalty = 0.3 * (j+1)
             # step_r_penalty = 0.3
             # r = r - step_r_penalty  # set penalty for each step (try to use less steps)
             s = s2
@@ -184,13 +178,6 @@ def train(sess, env, actor, critic, noise, action_bound):
         plot_step.append(step_counter)
         plot_ep_reward.append(ep_reward)
         plot_loss.append(critic_loss)
-
-    # save to matlab file
-    plot = {}
-    plot['steps'] = plot_step
-    plot['rewards'] = plot_ep_reward
-    plot['loss'] = plot_loss
-    io.savemat(to_matlab_path, plot)
 
     # plotting the graphs
     plt.figure('Episode Step')
@@ -262,7 +249,7 @@ def test(env, actor):
 
             if terminal:
                 print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@;@@@@@@@@@@@@@ Succeeded! Used ', j+1,
-                      " steps to make all lines safe! @@@@@@@@@@@@!")
+                      " steps to make all lines safe@@@@@@@@@@@@!")
                 break
         plot_step.append(step_counter)
         plot_ep_reward.append(ep_reward)
@@ -276,7 +263,7 @@ def test(env, actor):
 
     plt.figure('Episode Reward')
     plt.xlim((1, testing_size + 1))
-    # plt.ylim((-11, 11))
+    plt.ylim((-11, 11))
     plt.plot(range(1, testing_size + 1), plot_ep_reward, 'r-')
     plt.show()
 
@@ -288,7 +275,7 @@ def main(_):
 
         env = PowerSystem()
         # System Info
-        state_dim = 24  # We only consider the Current of all line as state at this moment
+        state_dim = 20  # We only consider the Current of all line as state at this moment
         action_dim = 4  # The number of generators
         action_bound = np.array([[-1, 1], [-0.675, 0.675]])
 
@@ -321,18 +308,18 @@ def main(_):
     #     saver = tf.train.Saver()
     #     load_path = saver.restore(sess, model_path)
     #     test(env, actor)
-    print('Running time: ', time.time() - t1)
+    print('Running time: {} minutes.'.format((time.time() - t1)/60))
 
 
 if __name__ == '__main__':
-    # # make a copy of original stdout route
-    # stdout_backup = sys.stdout
-    # log_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_Cascading_Failure_Prevention\logs_14bus.log"
-    # # define the log file that receives your log info
-    # log_file = open(log_path, "w")
-    # # redirect print output to log file
-    # sys.stdout = log_file
-    # # any command line that you will execute
+    # make a copy of original stdout route
+    stdout_backup = sys.stdout
+    log_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_Cascading_Failure_Prevention\logs.log"
+    # define the log file that receives your log info
+    log_file = open(log_path, "w")
+    # redirect print output to log file
+    sys.stdout = log_file
+    # any command line that you will execute
     tf.app.run()
     #
-    # log_file.close()
+    log_file.close()

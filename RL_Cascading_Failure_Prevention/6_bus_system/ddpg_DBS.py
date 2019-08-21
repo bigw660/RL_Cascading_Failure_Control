@@ -37,7 +37,7 @@ CRITIC_LEARNING_RATE = 0.0001
 # Discount factor
 GAMMA = 0.99
 # Soft target update param
-TAU = 0.0
+TAU = 0.001
 # Size of replay buffer
 BUFFER_SIZE = 10000
 MINIBATCH_SIZE = 128
@@ -45,10 +45,10 @@ MINIBATCH_SIZE = 128
 RANDOM_SEED = 23
 # path for saving the model
 model_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_" \
-             r"Cascading_Failure_Prevention\saved_models\14bus_model_1_all.ckpt"
+             r"Cascading_Failure_Prevention\saved_models\6bus_model_DBS_1.ckpt"
 # random-1 is the prefect model
 to_matlab_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_" \
-             r"Cascading_Failure_Prevention\plotting_data_14bus_1_all.mat"
+             r"Cascading_Failure_Prevention\plotting_data_6bus_DBS_1.mat"
 
 # ===========================
 #   Agent Training
@@ -89,7 +89,7 @@ def train(sess, env, actor, critic, noise, action_bound):
         print('########################################')
         print('########################################')
         print('Episode: ', i+1)
-        random = np.random.randint(1, 5001)
+        random = np.random.randint(1, 2001)
         s = env.reset_offline(random)
 
         # Initialize episode reward
@@ -100,6 +100,9 @@ def train(sess, env, actor, critic, noise, action_bound):
 
         # Initialize critic loss
         critic_loss = 0
+
+        # clear episode buffer
+        episode_buffer = np.empty((0, 5), float)
 
         for j in range(MAX_EP_STEPS):
             total_step += 1
@@ -124,9 +127,7 @@ def train(sess, env, actor, critic, noise, action_bound):
             step_r_penalty = 1
             r = r - step_r_penalty
 
-            # Adding s, a, r, terminal, s2 into buffer
-            replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, terminal,
-                              np.reshape(s2, (actor.s_dim,)))
+            episode_buffer = np.append(episode_buffer, [[s2, r, terminal, early_stop]])
 
             # Keep adding experience to the memory until there are at least minibatch size samples
             # if total_step > BUFFER_SIZE+1:
@@ -170,16 +171,26 @@ def train(sess, env, actor, critic, noise, action_bound):
             if early_stop:
                 print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Failed ! Generator exploded! @@@@@@@@@@@@@@@'
                       '@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+                # Adding s, a, r, terminal, s2 into buffer
+                for step in episode_buffer:
+                    replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, terminal,
+                                      np.reshape(s2, (actor.s_dim,)))
                 break
 
             if j == MAX_EP_STEPS-1 and not terminal:
                 print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Failed! Run out ot Steps! @@@@@@@@@@@@@@@@@@@@'
                       '@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+                for step in episode_buffer:
+                    replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, terminal,
+                                      np.reshape(s2, (actor.s_dim,)))
                 break
 
             if terminal:
                 print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@;@@@@@@@@@@@@@ Succeeded! Used ', j+1,
                       " steps to make all lines safe! @@@@@@@@@@@@")
+                for step in episode_buffer:
+                    replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, terminal,
+                                      np.reshape(s2, (actor.s_dim,)))
                 break
         plot_step.append(step_counter)
         plot_ep_reward.append(ep_reward)
@@ -276,7 +287,7 @@ def test(env, actor):
 
     plt.figure('Episode Reward')
     plt.xlim((1, testing_size + 1))
-    # plt.ylim((-11, 11))
+    plt.ylim((-11, 11))
     plt.plot(range(1, testing_size + 1), plot_ep_reward, 'r-')
     plt.show()
 
@@ -288,8 +299,8 @@ def main(_):
 
         env = PowerSystem()
         # System Info
-        state_dim = 24  # We only consider the Current of all line as state at this moment
-        action_dim = 4  # The number of generators
+        state_dim = 13  # We only consider the Current of all line as state at this moment
+        action_dim = 2  # The number of generators
         action_bound = np.array([[-1, 1], [-0.675, 0.675]])
 
         actor = ActorNetwork(sess, state_dim, action_dim, action_bound, ACTOR_LEARNING_RATE, TAU)
@@ -325,14 +336,14 @@ def main(_):
 
 
 if __name__ == '__main__':
-    # # make a copy of original stdout route
-    # stdout_backup = sys.stdout
-    # log_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_Cascading_Failure_Prevention\logs_14bus.log"
-    # # define the log file that receives your log info
-    # log_file = open(log_path, "w")
-    # # redirect print output to log file
-    # sys.stdout = log_file
-    # # any command line that you will execute
+    # make a copy of original stdout route
+    stdout_backup = sys.stdout
+    log_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_Cascading_Failure_Prevention\logs_6bus.log"
+    # define the log file that receives your log info
+    log_file = open(log_path, "w")
+    # redirect print output to log file
+    sys.stdout = log_file
+    # any command line that you will execute
     tf.app.run()
     #
-    # log_file.close()
+    log_file.close()
