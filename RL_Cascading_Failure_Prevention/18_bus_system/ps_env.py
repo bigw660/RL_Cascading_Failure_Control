@@ -209,11 +209,11 @@ class PowerSystem:
         #         reward = reward - abs(action[i] - 0)
 
             if self.p_gen[k] < p_gen_range[i][0]:
-                # early_stop = True
+                early_stop = True
                 reward = reward - (p_gen_range[k-1][0] - self.p_gen[k])
                 reward = reward - 0.5
             if self.p_gen[k] > p_gen_range[i][1]:
-                # early_stop = True
+                early_stop = True
                 reward = reward - (self.p_gen[k] - p_gen_range[k-1][1])
                 reward = reward - 0.5
             else:

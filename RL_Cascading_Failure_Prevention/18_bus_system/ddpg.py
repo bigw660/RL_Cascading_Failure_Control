@@ -20,7 +20,7 @@ import sys
 # Maximum episodes run
 MAX_EPISODES = 50000  # 5000
 # Max episode length
-MAX_EP_STEPS = 50  # 20
+MAX_EP_STEPS = 10  # 20
 # Episodes with noise
 NOISE_MAX_EP = 10000
 # Noise parameters - Ornstein Uhlenbeck
@@ -48,7 +48,7 @@ model_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_" \
              r"Cascading_Failure_Prevention\saved_models\118bus_model_1_10lines.ckpt"
 # random-1 is the prefect model
 to_matlab_path = r"C:\Users\Mariana Kamel\Documents\PyCharm\mariana\RL_" \
-             r"Cascading_Failure_Prevention\plotting_data_118bus_1_10lines.mat"
+             r"Cascading_Failure_Prevention\plotting_data_118bus_2.mat"
 
 # ===========================
 #   Agent Training
