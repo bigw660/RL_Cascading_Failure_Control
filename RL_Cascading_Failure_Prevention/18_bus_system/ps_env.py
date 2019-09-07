@@ -200,13 +200,13 @@ class PowerSystem:
         #         reward = reward - 5
         #         early_stop = True
 
-        for k, i in zip(self.ctrl_gens_idx, range(len(action))):
-            if self.p_gen[k] > 0:
-                self.p_gen[k] = action[i] + self.p_gen[k]
-
         # for k, i in zip(self.ctrl_gens_idx, range(len(action))):
-        #     if self.p_gen[k] == 0:
-        #         reward = reward - abs(action[i] - 0)
+        #     if self.p_gen[k] > 0:
+        #         self.p_gen[k] = action[i] + self.p_gen[k]
+
+        for k, i in zip(self.ctrl_gens_idx, range(len(action))):
+            if self.p_gen[k] == 0:
+                reward = reward - abs(action[i] - 0)
 
             if self.p_gen[k] < p_gen_range[i][0]:
                 early_stop = True
