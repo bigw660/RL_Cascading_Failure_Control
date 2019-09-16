@@ -93,20 +93,14 @@ void thirdFunc() {
   q = (int* ) malloc(sizeof(int));
   e = 55;
   *q = 100;
-  /**** HERE ****/
   free(q);
   return;
-}
-void fourthFunc() {
-  int z = 23;
-  int p = 45;
-}       
+}      
 int main() {
   int x = 10;
   int * y = &x;
   firstFunc();
   secondFunc();
-  fourthFunc();
   return 0;
 }
 ```
