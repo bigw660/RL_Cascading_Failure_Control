@@ -113,7 +113,7 @@ int* intlist = (int*) malloc(10);
 
 > You don't need to memorize the size of every data type, but you should understand why some are larger than others.
 
-**2.2:** Consider [the code in this Repl.it editor](https://repl.it/@twood02/c-review-malloc):
+**2.2:** Consider the following code:
 ```c
 #include <stdio.h>
 #include <stdlib.h>
