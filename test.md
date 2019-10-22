@@ -215,3 +215,9 @@ for(j=0; j <10; j++)
 }
 ```
 If we were to then print out the value of `sum`, would Java and C give us the same result? Why or why not? -->
+
+```diff
++ this text is highlighted in green
+- this text is highlighted in red
+- this text is highlighted in red
+```
